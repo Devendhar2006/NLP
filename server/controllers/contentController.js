@@ -1,6 +1,6 @@
 import axios from "axios";
 import { Log } from "../models/Log.js";
-import { maskUnsafeWords } from "../utils/maskText.js";
+import { detectUnsafeWords, maskUnsafeWords } from "../utils/maskText.js";
 
 export async function checkText(req, res) {
   try {
@@ -17,19 +17,50 @@ export async function checkText(req, res) {
     });
 
     const { unsafe_probability: unsafeProbability = 0.5 } = nlpResponse.data;
+    const matchedUnsafeWords = detectUnsafeWords(text);
+    const hasRuleBasedUnsafeWord = matchedUnsafeWords.length > 0;
+    const tokenCount = (text.match(/[A-Za-z0-9_]+/g) || []).length;
+    const keywordHits = matchedUnsafeWords.reduce((count, word) => {
+      const regex = new RegExp(`\\b${word}\\b`, "gi");
+      const matches = text.match(regex);
+      return count + (matches ? matches.length : 0);
+    }, 0);
     let isUnsafe = unsafeProbability >= parsedThreshold;
     // Toxic-comment model often false-flags long neutral educational text (e.g. Wikipedia-style paragraphs).
     if (isUnsafe && text.trim().length >= 250 && unsafeProbability < 0.82) {
       isUnsafe = false;
     }
-    const maskedText = isUnsafe ? maskUnsafeWords(text) : text;
+    // Always fail closed when explicit blocked words are present.
+    if (hasRuleBasedUnsafeWord) {
+      isUnsafe = true;
+    }
 
-    // Display values must match the final SAFE/UNSAFE decision (no scary "toxicity" on safe text).
-    const toxicityScore = isUnsafe ? unsafeProbability : 0;
-    // For SAFE, avoid showing a tiny "safety %" when the model was noisy but we cleared the text.
+    const maskedText = isUnsafe
+      ? maskUnsafeWords(text, { forceMaskAllIfNoMatch: !hasRuleBasedUnsafeWord })
+      : text;
+
+    // Policy score reflects keyword density, not model overreaction on long neutral paragraphs.
+    const keywordDensity = tokenCount > 0 ? keywordHits / tokenCount : 0;
+    const policyRiskScore = Math.max(0.08, Math.min(0.35, keywordDensity * 12));
+
+    // Display values must match the final SAFE/UNSAFE decision.
+    const toxicityScore = isUnsafe
+      ? hasRuleBasedUnsafeWord
+        ? policyRiskScore
+        : unsafeProbability
+      : 0;
+
     const confidenceDisplay = isUnsafe
-      ? unsafeProbability
+      ? hasRuleBasedUnsafeWord
+        ? policyRiskScore
+        : Math.max(unsafeProbability, parsedThreshold)
       : Math.max(0.88, 1 - unsafeProbability);
+
+    const moderationReason = hasRuleBasedUnsafeWord
+      ? "keyword_rule"
+      : isUnsafe
+        ? "ml_model"
+        : "none";
 
     let logId = null;
     if (saveLog) {
@@ -50,6 +81,10 @@ export async function checkText(req, res) {
       confidence: confidenceDisplay,
       toxicityScore,
       thresholdUsed: parsedThreshold,
+      moderationReason,
+      matchedUnsafeWords,
+      mlUnsafeProbability: unsafeProbability,
+      policyRiskScore: hasRuleBasedUnsafeWord ? policyRiskScore : null,
       logId
     });
   } catch (error) {

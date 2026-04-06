@@ -5,6 +5,8 @@ export default function ResultCard({ result }) {
   const cardClass = isSafe ? "result-card safe" : "result-card unsafe";
   const toxicityScore = typeof result.toxicityScore === "number" ? result.toxicityScore : 0;
   const toxicityPercent = Math.max(0, Math.min(100, toxicityScore * 100));
+  const mlProbability = Number(result.mlUnsafeProbability ?? result.toxicityScore ?? 0);
+  const mlPercent = Math.max(0, Math.min(100, mlProbability * 100));
   const confidencePct = (Number(result.confidence) || 0) * 100;
 
   return (
@@ -23,7 +25,8 @@ export default function ResultCard({ result }) {
         ) : (
           <>
             <p>
-              <strong>Harm confidence:</strong> {confidencePct.toFixed(2)}%
+              <strong>{result.moderationReason === "keyword_rule" ? "Policy risk" : "Harm confidence"}:</strong>{" "}
+              {confidencePct.toFixed(2)}%
             </p>
             <p>
               <strong>Threshold used:</strong> {(Number(result.thresholdUsed || 0.5) * 100).toFixed(0)}%
@@ -36,13 +39,23 @@ export default function ResultCard({ result }) {
         <p className="result-safe-summary">Nothing harmful detected — safe for kids to read.</p>
       ) : (
         <div className="toxicity-meter">
+          {result.moderationReason === "keyword_rule" ? (
+            <p className="result-safe-summary">
+              Blocked by safety word rule: {Array.isArray(result.matchedUnsafeWords) ? result.matchedUnsafeWords.join(", ") : "matched keyword"}.
+            </p>
+          ) : null}
           <div className="toxicity-meter-row">
-            <strong>Harm risk (model):</strong>
+            <strong>{result.moderationReason === "keyword_rule" ? "Policy risk (keyword density):" : "Harm risk (model):"}</strong>
             <span>{toxicityPercent.toFixed(1)}%</span>
           </div>
           <div className="progress-track">
             <div className="progress-fill" style={{ width: `${toxicityPercent}%` }} />
           </div>
+          {result.moderationReason === "keyword_rule" ? (
+            <p className="result-meta-full">
+              <strong>Model estimate (reference only):</strong> {mlPercent.toFixed(1)}%
+            </p>
+          ) : null}
         </div>
       )}
 

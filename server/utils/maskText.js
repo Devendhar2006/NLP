@@ -11,17 +11,34 @@ const harmfulWords = [
   "porn"
 ];
 
-export function maskUnsafeWords(text) {
-  let masked = text;
+export function detectUnsafeWords(text) {
+  const input = String(text || "");
+  const matchedWords = [];
+
+  for (const word of harmfulWords) {
+    const regex = new RegExp(`\\b${word}\\b`, "i");
+    if (regex.test(input)) {
+      matchedWords.push(word);
+    }
+  }
+
+  return matchedWords;
+}
+
+export function maskUnsafeWords(text, options = {}) {
+  const input = String(text || "");
+  const { forceMaskAllIfNoMatch = false } = options;
+  let masked = input;
+
   for (const word of harmfulWords) {
     const regex = new RegExp(`\\b${word}\\b`, "gi");
     masked = masked.replace(regex, "***");
   }
 
-  // Fallback: if nothing changed but the sentence is unsafe,
-  // mask every word token so no harmful text is shown.
-  if (masked === text) {
-    masked = text.replace(/[A-Za-z0-9_]+/g, "***");
+  // If the model marks text unsafe but no exact token match is found,
+  // mask all tokens as a safety fallback.
+  if (forceMaskAllIfNoMatch && masked === input) {
+    masked = input.replace(/[A-Za-z0-9_]+/g, "***");
   }
 
   return masked;
