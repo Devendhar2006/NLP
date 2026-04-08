@@ -10,13 +10,15 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="top-nav">
-        <h1>ChildSafe AI Filter</h1>
+        <h1 style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: 0 }}>
+          🛡️ ChildSafe AI Filter
+        </h1>
         <nav>
-          <Link to="/login">Parent Login</Link>
-          <Link to="/register">Register</Link>
-          <Link to="/safe-search">SafeSearch AI</Link>
-          <Link to="/child-checker">Child Checker</Link>
-          <Link to="/dashboard">Dashboard</Link>
+          <Link to="/login">🔐 Parent Login</Link>
+          <Link to="/register">📝 Register</Link>
+          <Link to="/safe-search">🔍 SafeSearch AI</Link>
+          <Link to="/child-checker">👶 Child Checker</Link>
+          <Link to="/dashboard">📊 Dashboard</Link>
         </nav>
       </header>
 

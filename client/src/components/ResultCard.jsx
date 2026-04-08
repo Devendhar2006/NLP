@@ -12,7 +12,7 @@ export default function ResultCard({ result }) {
   return (
     <section className={cardClass}>
       <div className="result-header">
-        <h3>{result.result}</h3>
+        <h3>{isSafe ? "✅ Safe Content" : "⚠️ Content Needs Review"}</h3>
         <span className="result-badge">{isSafe ? "Child Safe" : "Needs Filtering"}</span>
       </div>
 
@@ -20,7 +20,7 @@ export default function ResultCard({ result }) {
         {isSafe ? (
           <p className="result-meta-full">
             <strong>Safety confidence:</strong> {confidencePct.toFixed(1)}%
-            <span className="result-meta-hint"> — how sure the filter is that this is okay for kids</span>
+            <span className="result-meta-hint"> — How sure the filter is that this is okay for kids</span>
           </p>
         ) : (
           <>
@@ -36,12 +36,12 @@ export default function ResultCard({ result }) {
       </div>
 
       {isSafe ? (
-        <p className="result-safe-summary">Nothing harmful detected — safe for kids to read.</p>
+        <p className="result-safe-summary">✨ Nothing harmful detected — completely safe for kids to read.</p>
       ) : (
         <div className="toxicity-meter">
           {result.moderationReason === "keyword_rule" ? (
             <p className="result-safe-summary">
-              Blocked by safety word rule: {Array.isArray(result.matchedUnsafeWords) ? result.matchedUnsafeWords.join(", ") : "matched keyword"}.
+              🚫 Blocked by safety word rule: {Array.isArray(result.matchedUnsafeWords) ? result.matchedUnsafeWords.join(", ") : "matched keyword"}.
             </p>
           ) : null}
           <div className="toxicity-meter-row">
@@ -61,7 +61,7 @@ export default function ResultCard({ result }) {
 
       <div className="result-text-panels single">
         <article className="result-text-box highlighted">
-          <h4>{isSafe ? "Your text" : "Safe version"}</h4>
+          <h4>{isSafe ? "📖 Your Text" : "✂️ Safe Version"}</h4>
           <p>{result.maskedText}</p>
         </article>
       </div>
